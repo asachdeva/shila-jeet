@@ -9,7 +9,6 @@
   # DigitalOcean specific configuration
   digitalOcean = {
     # Your DigitalOcean API token
-    apiToken = "";
 
 
     # Droplet configuration
