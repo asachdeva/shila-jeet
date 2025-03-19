@@ -18,7 +18,7 @@
       region = "nyc3"; # Example: New York 3
       size = "s-1vcpu-1gb"; # Example: 1GB RAM, 1 vCPU
       image = "nixos-24.11"; # Or your desired NixOS version
-      sshKeys = [ "69:c7:f7:85:de:20:c6:14:6e:e9:97:b6:9d:6e:aa:82" ]; # Your SSH key fingerprint
+      sshKeys = [ "" ]; # Your SSH key fingerprint
     };
 
     # Optionally, configure a floating IP
