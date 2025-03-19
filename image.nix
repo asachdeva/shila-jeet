@@ -9,7 +9,7 @@
   # DigitalOcean specific configuration
   digitalOcean = {
     # Your DigitalOcean API token
-    apiToken = "dop_v1_4718ee0e380f196caeeae2656e8b1947a1b519be3873f249b7d033e541483a83";
+    apiToken = "";
 
 
     # Droplet configuration
