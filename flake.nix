@@ -6,10 +6,10 @@
     flake-compat={ url = "github:edolstra/flake-compat"; flake = false; };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, pre-commit-hooks, flake-utils, flake-compat }:
     flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
+    let 
+     pkgs = import nixpkgs { inherit system; };
       in with pkgs; {
         devShells.default = mkShell {
           packages = [
