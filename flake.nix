@@ -8,7 +8,7 @@
     flake-utils.lib.mkFlake {
       inherit self nixpkgs;
 
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ]; # Add more if needed
+      systems = [ "x86_64-linux"]; # Add more if needed
 
       devShells.default = nixpkgs.lib.mkShell {
         name = "development";
