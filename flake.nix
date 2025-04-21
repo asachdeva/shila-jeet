@@ -5,7 +5,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.mkFlake { inherit self; } {
+    flake-utils.lib.mkFlake  {
       inherit self nixpkgs;
 
       systems = [ "x86_64-linux"]; # Add more if needed
