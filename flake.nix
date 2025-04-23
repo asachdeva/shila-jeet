@@ -1,5 +1,5 @@
 {
-  description = "Quant analysis development environment";
+  description = "Shila Jeet's development environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -33,12 +33,14 @@
         devShellPackages = with pkgs; [
           # Rust
           rustToolchain
+          rustFmt
           
           # Haskell
           haskellPackages.ghc
           haskellPackages.cabal-install
           haskellPackages.stack
           haskellPackages.haskell-language-server
+          haskellPackages.fourmolu
           
           # ArgoCD and K8s tools
           argocd
@@ -66,10 +68,13 @@
           buildInputs = devShellPackages;
           
           shellHook = ''
-            echo "🚀 Welcome to the Quant Analysis Development Environment"
+            echo "🚀 Welcome to the Shila-Jeet's Development Environment"
             echo "Available tools:"
             echo " - Rust: $(rustc --version)"
             echo " - GHC: $(ghc --version)"
+            echo " - Fourmolu: $(fourmolu --version)"
+            echo " - rustfmt: $(rustfmt --version)"
+            echo " - Haskell Language Server: $(haskell-language-server --version)"
             echo " - ArgoCD: $(argocd version --client 2>/dev/null || echo 'CLI only')"
             echo " - Helm: $(helm version --short)"
             echo " - ClickHouse CLI: $(clickhouse-client --version 2>/dev/null || echo 'Available')"
