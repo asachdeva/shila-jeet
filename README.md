@@ -10,3 +10,6 @@ to bring more indigenous yoga and ayurveda
 ## My Projects
 -- Dev Environment Template
 -- Flake Template
+  --- clone repo
+  --- run 'nix develop'
+  
