@@ -1,0 +1,7 @@
+[package]
+name = "quant-analysis-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bartors = "0.1.6"  # Add the bartors dependency

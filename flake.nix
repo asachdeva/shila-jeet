@@ -19,7 +19,7 @@
         
         # Rust toolchain
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" "clippy" ];
+          extensions = [ "rust-src" "rust-analyzer" "clippy" "rustfmt" ];
         };
         
         # Haskell toolchain
@@ -33,7 +33,6 @@
         devShellPackages = with pkgs; [
           # Rust
           rustToolchain
-          rustFmt
           
           # Haskell
           haskellPackages.ghc
@@ -82,12 +81,12 @@
             name:               shila-jeet
             version:            0.1.0.0
             license:            BSD-3-Clause
-            author:             Quant Developer
-            maintainer:         developer@example.com
+            author:             Akshay Sachdeva
+            maintainer:         asachdeva@utexas.edu
             build-type:         Simple
             
             library
-              exposed-modules:     QuantAnalysis
+              exposed-modules:     shila-jeet
               build-depends:       base >= 4.14 && < 5
                                  , streamly ^>=0.9.0
                                  , streamly-core ^>=0.1.0
@@ -149,7 +148,7 @@
           name = "Cargo.toml";
           text = ''
             [package]
-            name = "quant-analysis-rust"
+            name = "shila-jeet-rust"
             version = "0.1.0"
             edition = "2021"
 
@@ -184,7 +183,7 @@
           # Set up Haskell project
           mkdir -p src app
           cp ${cabalProject}/cabal.project .
-          cp ${cabalFile}/quant-analysis.cabal .
+          cp ${cabalFile}/shila-jeet.cabal .
           cp ${quantAnalysisModule}/src/QuantAnalysis.hs src/
           cp ${mainHs}/app/Main.hs app/
 

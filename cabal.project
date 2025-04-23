@@ -1,0 +1,4 @@
+packages: ./shila-jeet.cabal
+
+package streamly
+  flags: +use-atomic-primops
