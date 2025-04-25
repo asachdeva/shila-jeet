@@ -89,6 +89,10 @@
             
             package streamly
               flags: +use-atomic-primops
+
+            -- Enable SIMD optimizations for better performance with massiv
+            package massiv
+              flags: +with-vector-th
           '';
           destination = "/cabal.project";
         };
@@ -107,10 +111,14 @@
             
             library
               exposed-modules:     shila-jeet
+                                , QuantAnalysis
+                                , ArrayProcessing
               build-depends:       base >= 4.14 && < 5
                                  , streamly ^>=0.9.0
                                  , streamly-core ^>=0.1.0
                                  , pinecone
+                                 , massiv >= 1.0.0.0
+                                 , massiv-io
                                  , aeson
                                  , text
                                  , vector
@@ -125,6 +133,8 @@
                                  , streamly ^>=0.9.0
                                  , streamly-core ^>=0.1.0
                                  , pinecone
+                                 , massiv >= 1.0.0.0
+                                 , massiv-io,
                                  , aeson
                                  , text
                                  ,vector
@@ -194,8 +204,74 @@
           '';
           destination = "/src/QuantAnalysis.hs";
         };
-       
-             # Generate a basic Main file with Mercury's Pinecone usage
+
+            # Generate a new module demonstrating massiv array processing
+        arrayProcessingModule = pkgs.writeTextFile {
+          name = "ArrayProcessing.hs";
+          text = ''
+            {-# LANGUAGE FlexibleContexts #-}
+            {-# LANGUAGE TypeFamilies #-}
+            
+            module ArrayProcessing where
+
+            import Data.Massiv.Array as A
+            import Data.Massiv.Array.IO as A
+            import qualified Data.Vector as V
+            import Pinecone (Vector(..))
+            import qualified Data.Text as T
+            
+            -- | Convert financial data from massiv Array to Pinecone Vector
+            arrayToVector :: (Source r Float) => Array r Ix2 Float -> T.Text -> Vector
+            arrayToVector arr vecId = 
+              let flatVec = V.fromList $ A.toList arr
+              in Vector
+                  { vId = vecId
+                  , vValues = flatVec
+                  , vSparseValues = Nothing
+                  , vMetadata = Nothing
+                  }
+            
+            -- | Process a 2D matrix of financial data 
+            processMatrix :: Array U Ix2 Float -> Array D Ix2 Float
+            processMatrix matrix = 
+              -- Example operations: normalize rows, compute moving averages, etc.
+              compute $ A.map (\x -> (x - minVal) / (maxVal - minVal)) matrix
+              where
+                minVal = minValue matrix
+                maxVal = maxValue matrix
+            
+            -- | Create a matrix from a list of financial time series
+            createTimeSeriesMatrix :: [[Float]] -> Array U Ix2 Float
+            createTimeSeriesMatrix rows = 
+              fromLists' Seq rows
+            
+            -- | Extract features from raw financial data
+            extractFeatures :: Array U Ix2 Float -> Array D Ix2 Float
+            extractFeatures arr = 
+              -- In a real implementation, this would compute various financial indicators:
+              -- volatility, momentum, moving averages, etc.
+              compute $ A.mapStencil Edge (spatialGradientStencil :: Stencil Ix2 Float Float) arr
+            
+            -- | Compute time series correlation matrix
+            correlationMatrix :: Array U Ix2 Float -> Array D Ix2 Float
+            correlationMatrix matrix = 
+              -- Simplified correlation computation
+              -- Real implementation would involve proper statistical correlation
+              compute $ A.outerWith (*) (A.transpose matrix) matrix
+            
+            -- | Convert a massiv array to vector format for Pinecone storage
+            preparePineconeVectors :: Array U Ix2 Float -> [T.Text] -> [Vector]
+            preparePineconeVectors matrix rowIds =
+              zipWith mkVector [0..] rowIds
+              where
+                mkVector idx vecId = 
+                  let row = A.computeAs U $ A.slice matrix (Ix1 idx)
+                  in arrayToVector row vecId
+          '';
+          destination = "/src/ArrayProcessing.hs";
+        };
+
+             # Generate a basic Main file with Mercury's Pinecone usage and massiv
         mainHs = pkgs.writeTextFile {
           name = "Main.hs";
           text = ''
@@ -205,14 +281,17 @@
 
             import qualified Streamly.Data.Stream as Stream
             import QuantAnalysis
+            import ArrayProcessing
             import Pinecone
             import qualified Data.Vector as V
+            import qualified Data.Massiv.Array as A
             import System.Environment (getEnv)
             import Data.Text (Text)
+            import qualified Data.Text as T
 
             main :: IO ()
             main = do
-              putStrLn "Quant Analysis Lambda Function with Pinecone Integration"
+              putStrLn "Quant Analysis with Pinecone and Massiv Integration"
               
               -- Example data stream (in a real application, this would come from market data)
               let dataStream = Stream.fromList [1.0, 2.0, 3.0, 4.0, 5.0]
@@ -229,35 +308,59 @@
               
               client <- newClient config
               
-              -- Check if our index exists, if not create it
-              let indexName = "quant-analysis"
-              indexes <- listIndexes client
+              -- Demonstrate massiv usage
+              putStrLn "\nDemonstrating massiv array operations:"
               
-              if not (indexName `elem` indexes)
-                then do
-                  putStrLn $ "Creating index: " ++ show indexName
-                  let vectorConfig = createVectorConfig 5 "cosine"
-                  _ <- createIndex client indexName vectorConfig
-                  putStrLn "Index created successfully"
-                else
-                  putStrLn "Index already exists"
+              -- Create a sample 2D array of financial data
+              let financialData = A.fromLists' A.Seq 
+                    [ [100.0, 101.2, 102.5, 103.1, 102.8]  -- Stock A price series
+                    , [45.2,  45.8,  46.1,  45.9,  46.2]   -- Stock B price series
+                    , [78.5,  79.0,  77.8,  76.9,  77.5]   -- Stock C price series
+                    ]
+              
+              putStrLn $ "Financial data matrix:\n" ++ show financialData
+              
+              -- Process the matrix
+              let processedMatrix = processMatrix financialData
+              putStrLn $ "Normalized matrix:\n" ++ show processedMatrix
+              
+              -- Extract features
+              let features = extractFeatures financialData
+              putStrLn $ "Feature matrix:\n" ++ show features
+              
+              -- Compute correlation matrix
+              let corr = correlationMatrix financialData
+              putStrLn $ "Correlation matrix:\n" ++ show corr
+              
+              -- Create Pinecone vectors from rows of the matrix
+              let stockIds = ["STOCK-A", "STOCK-B", "STOCK-C"]
+                  pineconeVectors = preparePineconeVectors financialData stockIds
+              
+              putStrLn $ "Created " ++ show (length pineconeVectors) ++ " Pinecone vectors from massiv array rows"
               
               -- Store example vector in Pinecone
               let namespace = "financial-metrics"
                   exampleVector = V.fromList [1.0, 2.0, 3.0, 4.0, 5.0]
               
-              storeFinancialVector client namespace exampleVector Nothing
-              putStrLn "Vector stored in Pinecone"
+              putStrLn "\nStoring vectors in Pinecone... (uncomment in production)"
+              -- In production, uncomment the following:
+              -- storeFinancialVector client namespace exampleVector Nothing
+              -- putStrLn "Vector stored in Pinecone"
+              
+              -- upsert client namespace pineconeVectors
+              -- putStrLn "Massiv-derived vectors stored in Pinecone"
               
               -- Query similar vectors
-              matches <- queryFinancialVectors client namespace exampleVector 3
-              putStrLn $ "Found " ++ show (length matches) ++ " similar vectors"
+              putStrLn "\nQuerying vectors from Pinecone... (uncomment in production)"
+              -- In production, uncomment the following:
+              -- matches <- queryFinancialVectors client namespace exampleVector 3
+              -- putStrLn $ "Found " ++ show (length matches) ++ " similar vectors"
+              
+              putStrLn "\nAnalysis complete!"
           '';
           destination = "/app/Main.hs";
         };
-
-
-        # Basic Rust project with bartors dependency
+        
         rustCargoToml = pkgs.writeTextFile {
           name = "Cargo.toml";
           text = ''
@@ -299,16 +402,18 @@
           cp ${cabalProject}/cabal.project .
           cp ${cabalFile}/shila-jeet.cabal .
           cp ${quantAnalysisModule}/src/QuantAnalysis.hs src/
+          cp ${arrayProcessingModule}/src/ArrayProcessing.hs src/
           cp ${mainHs}/app/Main.hs app/
 
-          echo "Project structure set up with Streamly and Mercury's Pinecone integration!"
+          echo "Project structure set up with Streamly, Pinecone and massiv integration!"
           echo "To build: cabal build"
           echo ""
           echo "Don't forget to set the PINECONE_API_KEY environment variable before running."
 
           # Set up Rust project
           mkdir -p rust/src
-          cp ${rustCargoToml}/Cargo.toml rust/
+
+            cp ${rustCargoToml}/Cargo.toml rust/
           cp ${rustSrcMain}/src/main.rs rust/src/
           
           echo "Project structure set up with Streamly and bartors dependencies!"
@@ -328,6 +433,8 @@
             projectHaskellPackages.streamly
             projectHaskellPackages.streamly-core
             projectHaskellPackages.pinecone
+            projectHaskellPackages.massiv
+            projectHaskellPackages.massiv-io
           ];
 
           
@@ -359,6 +466,10 @@
             name = "shila-jeet-tools";
             paths = devShellPackages;
           };
+
+          # Make pinecone and massiv available outside the devShell
+          pinecone = projectHaskellPackages.pinecone;
+          massv = projectHaskellPackages.massiv;
         };
       }
     );
