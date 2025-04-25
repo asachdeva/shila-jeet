@@ -7,6 +7,11 @@
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
     };
+    # Add the pinecone repository as an input
+    pinecone-src = {
+      url = "github:MercuryTechnologies/pinecone";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
@@ -24,9 +29,12 @@
         
         # Haskell toolchain
         haskellPackages = pkgs.haskellPackages;
-        
-        # Haskell package set for streaming
-        projectHaskellPackages = haskellPackages.extend (self: super: {});
+
+        # Haskell package set for streaming with pinecone
+        projectHaskellPackages = haskellPackages.extend (self: super: {
+          # Add pinecone from Mercury Technologies
+          pinecone = self.callCabal2nix "pinecone" pinecone-src {};
+        });
 
         
         # Development shell packages
@@ -54,7 +62,19 @@
             echo "Running HyperDX CLI wrapper - this is a placeholder"
             # In actual implementation, this might download or configure HyperDX
           '')
-          
+
+          # Pinecone CLI wrapper
+          (pkgs.writeShellScriptBin "pinecone-cli" ''
+            echo "Running Pinecone CLI wrapper"
+            echo "This is a convenience tool for interacting with Pinecone vector DB"
+            echo "Usage: pinecone-cli [command]"
+            echo "Commands:"
+            echo "  list-indexes - List your Pinecone indexes"
+            echo "  describe-index [name] - Describe a specific index"
+            echo "  query [index] [vector] - Query vectors from an index"
+            # Actual implementation would call the appropriate API endpoints
+          '')
+
           # Dev tools
           git
           gnumake
@@ -90,6 +110,10 @@
               build-depends:       base >= 4.14 && < 5
                                  , streamly ^>=0.9.0
                                  , streamly-core ^>=0.1.0
+                                 , pinecone
+                                 , aeson
+                                 , text
+                                 , vector
               hs-source-dirs:      src
               default-language:    Haskell2010
               ghc-options:         -Wall
@@ -100,6 +124,10 @@
                                  , shila-jeet
                                  , streamly ^>=0.9.0
                                  , streamly-core ^>=0.1.0
+                                 , pinecone
+                                 , aeson
+                                 , text
+                                 ,vector
               hs-source-dirs:      app
               default-language:    Haskell2010
               ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
@@ -111,37 +139,123 @@
         quantAnalysisModule = pkgs.writeTextFile {
           name = "QuantAnalysis.hs";
           text = ''
+            {-# LANGUAGE OverloadedStrings #-}
+
             module QuantAnalysis where
 
             import qualified Streamly.Data.Stream as Stream
             import qualified Streamly.Data.Fold as Fold
+            import Pinecone
+            import qualified Data.Vector as V
+            import Date.Text (Text)
+            import Date.Aeson (Object)
 
             -- | Process a stream of financial data
             processFinancialData :: Stream.Stream IO Double -> IO Double
             processFinancialData stream = Stream.fold Fold.sum stream
+
+                      -- | Create a vector config for financial data analysis
+            createVectorConfig :: Int -> Text -> VectorConfig
+            createVectorConfig dimensions metricType =
+              VectorConfig
+                { vcDimension = dimensions
+                , vcMetric = metricType
+                , vcPods = 1
+                , vcReplicas = 1
+                , vcPodType = "s1.x1"
+                }
+            
+            -- | Store financial data vectors in Pinecone
+            storeFinancialVector :: Client -> Text -> V.Vector Float -> Maybe Object -> IO ()
+            storeFinancialVector client namespace vectorData metadata = do
+              let vector = Vector
+                    { vId = "fin-" <> namespace
+                    , vValues = vectorData
+                    , vSparseValues = Nothing
+                    , vMetadata = metadata
+                    }
+              _ <- upsert client namespace [vector]
+              return ()
+            
+            -- | Query similar vectors from Pinecone
+            queryFinancialVectors :: Client -> Text -> V.Vector Float -> Int -> IO [QueryMatch]
+            queryFinancialVectors client namespace queryVector topK = do
+              let queryReq = QueryRequest
+                    { qVector = Just queryVector
+                    , qSparseVector = Nothing
+                    , qTopK = topK
+                    , qFilter = Nothing
+                    , qIncludeValues = True
+                    , qIncludeMetadata = True
+                    , qNamespace = namespace
+                    }
+              response <- query client queryReq
+              return $ qmMatches response
           '';
           destination = "/src/QuantAnalysis.hs";
         };
-        
-        # Generate a basic Main file
+       
+             # Generate a basic Main file with Mercury's Pinecone usage
         mainHs = pkgs.writeTextFile {
           name = "Main.hs";
           text = ''
+            {-# LANGUAGE OverloadedStrings #-}
+            
             module Main where
 
             import qualified Streamly.Data.Stream as Stream
-            import QuantAnalysis (processFinancialData)
+            import QuantAnalysis
+            import Pinecone
+            import qualified Data.Vector as V
+            import System.Environment (getEnv)
+            import Data.Text (Text)
 
             main :: IO ()
             main = do
-              putStrLn "Quant Analysis Lambda Function"
+              putStrLn "Quant Analysis Lambda Function with Pinecone Integration"
+              
               -- Example data stream (in a real application, this would come from market data)
               let dataStream = Stream.fromList [1.0, 2.0, 3.0, 4.0, 5.0]
               result <- processFinancialData dataStream
               putStrLn $ "Total: " ++ show result
+              
+              -- Initialize Pinecone client
+              apiKey <- getEnv "PINECONE_API_KEY"
+              let config = ClientConfig
+                    { ccApiKey = apiKey
+                    , ccEnvironment = "us-west1-gcp"  -- replace with your environment
+                    , ccProjectId = "your-project-id" -- replace with your project ID
+                    }
+              
+              client <- newClient config
+              
+              -- Check if our index exists, if not create it
+              let indexName = "quant-analysis"
+              indexes <- listIndexes client
+              
+              if not (indexName `elem` indexes)
+                then do
+                  putStrLn $ "Creating index: " ++ show indexName
+                  let vectorConfig = createVectorConfig 5 "cosine"
+                  _ <- createIndex client indexName vectorConfig
+                  putStrLn "Index created successfully"
+                else
+                  putStrLn "Index already exists"
+              
+              -- Store example vector in Pinecone
+              let namespace = "financial-metrics"
+                  exampleVector = V.fromList [1.0, 2.0, 3.0, 4.0, 5.0]
+              
+              storeFinancialVector client namespace exampleVector Nothing
+              putStrLn "Vector stored in Pinecone"
+              
+              -- Query similar vectors
+              matches <- queryFinancialVectors client namespace exampleVector 3
+              putStrLn $ "Found " ++ show (length matches) ++ " similar vectors"
           '';
           destination = "/app/Main.hs";
         };
+
 
         # Basic Rust project with bartors dependency
         rustCargoToml = pkgs.writeTextFile {
@@ -153,7 +267,7 @@
             edition = "2021"
 
             [dependencies]
-            bartors = "0.1.6"  # Add the bartors dependency
+            barters = "0.1.6"  # Add the barters dependency
           '';
           destination = "/Cargo.toml";
         };
@@ -161,18 +275,18 @@
         rustSrcMain = pkgs.writeTextFile {
           name = "main.rs";
           text = ''
-            // Example Rust code using bartors
-            use bartors::prelude::*;
+            // Example Rust code using barters
+            use barters::prelude::*;
 
             fn main() {
                 println!("Quant Analysis Rust Component");
                 
                 // Example bartors usage (placeholder)
-                // This is just an example - replace with actual bartors use based on your needs
+                // This is just an example - replace with actual barters use based on your needs
                 let input = vec![1.0, 2.0, 3.0, 4.0, 5.0];
                 println!("Input data: {:?}", input);
                 
-                // TODO: Implement your trading strategy logic using bartors
+                // TODO: Implement your trading strategy logic using barters
             }
           '';
           destination = "/src/main.rs";
@@ -186,6 +300,11 @@
           cp ${cabalFile}/shila-jeet.cabal .
           cp ${quantAnalysisModule}/src/QuantAnalysis.hs src/
           cp ${mainHs}/app/Main.hs app/
+
+          echo "Project structure set up with Streamly and Mercury's Pinecone integration!"
+          echo "To build: cabal build"
+          echo ""
+          echo "Don't forget to set the PINECONE_API_KEY environment variable before running."
 
           # Set up Rust project
           mkdir -p rust/src
@@ -208,6 +327,7 @@
             setupProjectScript
             projectHaskellPackages.streamly
             projectHaskellPackages.streamly-core
+            projectHaskellPackages.pinecone
           ];
 
           
@@ -218,10 +338,13 @@
             echo " - GHC: $(ghc --version)"
             echo " - Fourmolu: $(fourmolu --version)"
             echo " - rustfmt: $(rustfmt --version)"
+
             echo " - Haskell Language Server: $(haskell-language-server --version)"
             echo " - ArgoCD: $(argocd version --client 2>/dev/null || echo 'CLI only')"
             echo " - Helm: $(helm version --short)"
             echo " - ClickHouse CLI: $(clickhouse-client --version 2>/dev/null || echo 'Available')"
+            echo " - Pinecone CLI: Available (pincecone-cli)"
+            echo " - Mercury's Pinecone Integration:"
             echo ""
             echo "Happy coding! 📈"
           '';
