@@ -50,10 +50,27 @@
         "type": "github"
       }
     },
+    "pinecone-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1743719842,
+        "narHash": "sha256-swj4CVw6MDa1EPQGPm95JRgJ4aikaRMS4LRHQdiIU7Q=",
+        "owner": "MercuryTechnologies",
+        "repo": "pinecone",
+        "rev": "5d04bbd4be26e0e452326af80c52594bc0bad7d7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "MercuryTechnologies",
+        "repo": "pinecone",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
+        "pinecone-src": "pinecone-src",
         "rust-overlay": "rust-overlay"
       }
     },
