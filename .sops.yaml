@@ -1,0 +1,22 @@
+keys:
+  - &user_key age1l2kn4j94rkxxlt65l8hv3rhj9yvdgkt2azrjz6tj9mx5zehz39ys4vy8ex 
+
+creation_rules:
+  # Path to the secrets file
+  - path_regex: secrets/secrets\.yaml$
+    key_groups:
+      - age:
+        - *user_key
+    
+  # You can define different rules for different paths
+  # - path_regex: secrets/development/.*\.yaml$
+    # key_groups:
+      # - age:
+        # - *user_key
+        
+  # For production secrets
+  # - path_regex: secrets/production/.*\.yaml$
+    # key_groups:
+      # - age:
+        # - *user_key
+

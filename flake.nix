@@ -4,17 +4,25 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
     };
+
     # Add the pinecone repository as an input
     pinecone-src = {
       url = "github:MercuryTechnologies/pinecone";
       flake = false;
     };
+
+    # Add the sops-nix repository as an input
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, pinecone-src, ... }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, pinecone-src, sops-nix, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -35,6 +43,7 @@
           # Add pinecone from Mercury Technologies
           pinecone = self.callCabal2nix "pinecone" pinecone-src {};
         });
+
 
         
         # Development shell packages
@@ -413,7 +422,7 @@
           # Set up Rust project
           mkdir -p rust/src
 
-            cp ${rustCargoToml}/Cargo.toml rust/
+          cp ${rustCargoToml}/Cargo.toml rust/
           cp ${rustSrcMain}/src/main.rs rust/src/
           
           echo "Project structure set up with Streamly and bartors dependencies!"
@@ -426,6 +435,31 @@
 
       in
       {
+
+        # NixOS module for system configuration
+        nixosModules.default = { config, lib, pkgs, ... }: {
+          imports = [
+            sops-nix.nixosModules.sops
+          ];
+          
+          # Configure sops-nix
+          sops = {
+            defaultSopsFile = ./secrets/secrets.yaml;
+            age.keyFile = "~/.config/sops/keys.txt";
+            # Add your secrets configuration
+            secrets = {
+              example_key = {
+                owner = "root";
+                group = "root";
+                mode = "0400";
+              };
+              # Add more secrets as needed
+            };
+          };
+          
+          # Add more system configuration as needed
+        };
+
         # Development shell with all tools
         devShells.default = pkgs.mkShell {
           buildInputs = devShellPackages ++ [
@@ -465,6 +499,7 @@
           default = pkgs.symlinkJoin {
             name = "shila-jeet-tools";
             paths = devShellPackages;
+
           };
 
           # Make pinecone and massiv available outside the devShell
