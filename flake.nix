@@ -42,10 +42,9 @@
         projectHaskellPackages = haskellPackages.extend (self: super: {
           # Add pinecone from Mercury Technologies
           # pinecone = self.callCabal2nix "pinecone" pinecone-src {};
-          pinecone = self.callCabal2nix "pinecone" pinecone-src {}.overrideAttrs (old: {
+          pinecone = (self.callCabal2nix "pinecone" pinecone-src {}).overrideAttrs (old: {
   doCheck = false;
           }); 
-
         });
 
 
