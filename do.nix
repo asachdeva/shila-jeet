@@ -65,13 +65,11 @@ in
     {
       image.extension = lib.concatStringsSep "." [
         format
-        (
-          {
+        {
             "gzip" = "gz";
             "bzip2" = "bz2";
           }
           .${cfg.compressionMethod}
-        )
       ];
       system.nixos.tags = [ "digital-ocean" ];
       system.build.image = config.system.build.digitalOceanImage;
