@@ -7,10 +7,18 @@ maintainer:         asachdeva@utexas.edu
 build-type:         Simple
 
 library
-  exposed-modules:     shila-jeet
+  exposed-modules:     Shila_Jeet
+                    , QuantAnalysis
+                    , ArrayProcessing
   build-depends:       base >= 4.14 && < 5
                      , streamly ^>=0.9.0
                      , streamly-core ^>=0.1.0
+                     , pinecone
+                     , massiv >= 1.0.0.0
+                     , massiv-io
+                     , aeson
+                     , text
+                     , vector
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall
@@ -21,6 +29,12 @@ executable shila-jeet
                      , shila-jeet
                      , streamly ^>=0.9.0
                      , streamly-core ^>=0.1.0
+                     , pinecone
+                     , massiv >= 1.0.0.0
+                     , massiv-io,
+                     , aeson
+                     , text
+                     ,vector
   hs-source-dirs:      app
   default-language:    Haskell2010
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N

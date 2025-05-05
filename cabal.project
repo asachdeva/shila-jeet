@@ -2,3 +2,7 @@ packages: ./shila-jeet.cabal
 
 package streamly
   flags: +use-atomic-primops
+
+-- Enable SIMD optimizations for better performance with massiv
+package massiv
+  flags: +with-vector-th

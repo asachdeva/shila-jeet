@@ -127,7 +127,7 @@
             build-type:         Simple
             
             library
-              exposed-modules:     shila-jeet
+              exposed-modules:     Shila_Jeet
                                 , QuantAnalysis
                                 , ArrayProcessing
               build-depends:       base >= 4.14 && < 5
