@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    flake-schema.url = "github:oxalica/flake-schema";
 
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -15,6 +16,11 @@
       flake = false;
     };
 
+        # nix lsp support
+    nil.url = "github:oxalica/nil";
+    nixd.url = "github:nix-community/nixd";
+    nixd.inputs.nixpkgs.follows = "nixpkgs";
+
     # Add the sops-nix repository as an input
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -22,7 +28,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, pinecone-src, sops-nix, ... }:
+  outputs = { self, nixpkgs, flake-utils, flake-schema, rust-overlay, pinecone-src, sops-nix, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
