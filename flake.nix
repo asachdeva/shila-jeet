@@ -36,7 +36,7 @@
         };
         
         # Haskell toolchain
-        haskellPackages = pkgs.haskellPackages;
+        inherit (pkgs) haskellPackages;
 
         # Haskell package set for streaming with pinecone
         projectHaskellPackages = haskellPackages.extend (self: super: {
@@ -506,7 +506,7 @@
           };
 
           # Make pinecone and massiv available outside the devShell
-          pinecone = projectHaskellPackages.pinecone;
+          inherit (projectHaskellPackages) pinecone;
           massv = projectHaskellPackages.massiv;
         };
       }
