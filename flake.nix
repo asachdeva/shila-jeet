@@ -151,7 +151,7 @@
                                  , streamly-core ^>=0.1.0
                                  , pinecone
                                  , massiv >= 1.0.0.0
-                                 , massiv-io,
+                                 , massiv-io
                                  , aeson
                                  , text
                                  ,vector
