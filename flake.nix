@@ -4,7 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    flake-schema.url = "github:oxalica/flake-schema";
 
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -28,7 +27,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, flake-schema, rust-overlay, pinecone-src, sops-nix, ... }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, pinecone-src, sops-nix, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
