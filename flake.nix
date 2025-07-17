@@ -15,7 +15,7 @@
       flake = false;
     };
 
-        # nix lsp support
+    # nix lsp support
     nil.url = "github:oxalica/nil";
     nixd.url = "github:nix-community/nixd";
     nixd.inputs.nixpkgs.follows = "nixpkgs";
@@ -34,12 +34,12 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        
+
         # Rust toolchain
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" "clippy" "rustfmt" ];
         };
-        
+
         # Haskell toolchain
         inherit (pkgs) haskellPackages;
 
@@ -47,33 +47,33 @@
         projectHaskellPackages = haskellPackages.extend (self: super: {
           # Add pinecone from Mercury Technologies
           # pinecone = self.callCabal2nix "pinecone" pinecone-src {};
-          pinecone = (self.callCabal2nix "pinecone" pinecone-src {}).overrideAttrs (old: {
-  doCheck = false;
-          }); 
+          pinecone = (self.callCabal2nix "pinecone" pinecone-src { }).overrideAttrs (old: {
+            doCheck = false;
+          });
         });
 
 
-        
+
         # Development shell packages
         devShellPackages = with pkgs; [
           # Rust
           rustToolchain
-          
+
           # Haskell
           haskellPackages.ghc
           haskellPackages.cabal-install
           haskellPackages.stack
           haskellPackages.haskell-language-server
           haskellPackages.fourmolu
-          
+
           # ArgoCD and K8s tools
           argocd
           kubectl
           kubernetes-helm
-          
+
           # ClickHouse
           clickhouse-cli
-          
+
           # HyperDX
           (pkgs.writeShellScriptBin "hyperdx" ''
             echo "Running HyperDX CLI wrapper - this is a placeholder"
@@ -113,8 +113,8 @@
           '';
           destination = "/cabal.project";
         };
-        
-         # Generate a basic cabal file for the project
+
+        # Generate a basic cabal file for the project
         cabalFile = pkgs.writeTextFile {
           name = "shila-jeet.cabal";
           text = ''
@@ -162,7 +162,8 @@
           destination = "/shila-jeet.cabal";
         };
 
-          # Generate a basic module file
+
+        # Generate a basic module file
         quantAnalysisModule = pkgs.writeTextFile {
           name = "QuantAnalysis.hs";
           text = ''
@@ -222,7 +223,7 @@
           destination = "/src/QuantAnalysis.hs";
         };
 
-            # Generate a new module demonstrating massiv array processing
+        # Generate a new module demonstrating massiv array processing
         arrayProcessingModule = pkgs.writeTextFile {
           name = "ArrayProcessing.hs";
           text = ''
@@ -288,7 +289,7 @@
           destination = "/src/ArrayProcessing.hs";
         };
 
-             # Generate a basic Main file with Mercury's Pinecone usage and massiv
+        # Generate a basic Main file with Mercury's Pinecone usage and massiv
         mainHs = pkgs.writeTextFile {
           name = "Main.hs";
           text = ''
@@ -377,7 +378,7 @@
           '';
           destination = "/app/Main.hs";
         };
-        
+
         rustCargoToml = pkgs.writeTextFile {
           name = "Cargo.toml";
           text = ''
@@ -411,7 +412,7 @@
           '';
           destination = "/src/main.rs";
         };
-        
+
         # Create a script to set up the project structure
         setupProjectScript = pkgs.writeShellScriptBin "setup-project" ''
           # Set up Haskell project
@@ -449,7 +450,7 @@
           imports = [
             sops-nix.nixosModules.sops
           ];
-          
+
           # Configure sops-nix
           sops = {
             defaultSopsFile = ./secrets/secrets.yaml;
@@ -464,7 +465,7 @@
               # Add more secrets as needed
             };
           };
-          
+
           # Add more system configuration as needed
         };
 
@@ -479,7 +480,7 @@
             projectHaskellPackages.massiv-io
           ];
 
-          
+
           shellHook = ''
             echo "🚀 Welcome to the Shila-Jeet's Development Environment"
             echo "Available tools:"
@@ -497,9 +498,9 @@
             echo ""
             echo "Happy coding! 📈"
           '';
-          
+
           # Environment variables if needed
-           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
+          RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
         };
 
         # Also include packages if you want them available outside the devShell
